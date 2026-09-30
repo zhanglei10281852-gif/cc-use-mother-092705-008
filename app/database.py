@@ -311,6 +311,11 @@ PERMISSIONS = [
     ("announcements.write", "维护公告", "announcements", "write"),
     ("audit.read", "查看审计", "audit", "read"),
     ("jobs.run", "执行后台任务", "jobs", "run"),
+    ("biodiversity.read", "查看物种清单", "biodiversity", "read"),
+    ("biodiversity.edit", "编辑物种清单草稿", "biodiversity", "edit"),
+    ("biodiversity.review", "复核物种清单", "biodiversity", "review"),
+    ("biodiversity.publish", "发布与撤回物种清单", "biodiversity", "publish"),
+    ("biodiversity.manage", "维护区域文献与敏感授权", "biodiversity", "manage"),
 ]
 
 
@@ -380,10 +385,31 @@ def init_db() -> None:
             "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('auditor','审计查看员','只读查看业务与审计记录',1,?,?)",
             (now, now),
         )
+        connection.execute(
+            "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('biodiversity_editor','生境清单编辑员','编辑物种草稿并提交复核',1,?,?)",
+            (now, now),
+        )
+        connection.execute(
+            "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES('biodiversity_reviewer','生境清单复核员','复核草稿、发布与撤回清单版本',1,?,?)",
+            (now, now),
+        )
         administrator = connection.execute("SELECT id FROM roles WHERE code='administrator'").fetchone()[0]
         connection.execute(
             "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) SELECT ?,id,? FROM permissions",
             (administrator, now),
+        )
+        editor = connection.execute("SELECT id FROM roles WHERE code='biodiversity_editor'").fetchone()[0]
+        reviewer = connection.execute("SELECT id FROM roles WHERE code='biodiversity_reviewer'").fetchone()[0]
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code IN ('biodiversity.read','biodiversity.edit')",
+            (editor, now),
+        )
+        connection.execute(
+            "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+            "SELECT ?,id,? FROM permissions WHERE code IN "
+            "('biodiversity.read','biodiversity.edit','biodiversity.review','biodiversity.publish','biodiversity.manage')",
+            (reviewer, now),
         )
 
 
